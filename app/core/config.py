@@ -19,12 +19,14 @@ class Settings(BaseSettings):
 
     # Database
     POSTGRES_SERVER: str = "localhost"
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_DB: str = "casa_digital_mcp"
-    POSTGRES_PORT: str = "5432"
+    POSTGRES_USER: str = "admin"
+    POSTGRES_PASSWORD: str = "admin"
+    POSTGRES_DB: str = "mcp_db"
+    POSTGRES_PORT: str = "11432"
     DATABASE_URI: Optional[str] = None
-
+    # Adicione a configuração DATABASE_URL
+    DATABASE_URL: str = "postgresql://admin:admin@localhost:11432/mcp_db"
+    
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
         if self.DATABASE_URI:
@@ -39,7 +41,7 @@ class Settings(BaseSettings):
 
     # Security
     SECRET_KEY: str = "your-secret-key-here"  # Alterar em produção!
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 11520
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     
     class Config:
         case_sensitive = True

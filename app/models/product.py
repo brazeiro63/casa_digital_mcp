@@ -3,7 +3,7 @@ from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Text, 
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from app.db.base import Base  # Ajuste o caminho conforme a estrutura do seu projeto
+from app.db.session import Base
 
 class Product(Base):
     __tablename__ = "products"
@@ -26,3 +26,4 @@ class Product(Base):
 
     def __repr__(self):
         return f"<Product {self.title}>"
+    
