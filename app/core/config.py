@@ -39,7 +39,7 @@ class Settings(BaseSettings):
 
     # Security
     SECRET_KEY: str = "your-secret-key-here"  # Alterar em produção!
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 dias
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 11520
     
     class Config:
         case_sensitive = True

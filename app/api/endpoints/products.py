@@ -59,3 +59,19 @@ async def get_product_categories(
     """
     categories = await affiliate_service.get_product_categories(platform)
     return categories
+
+@router.get("/{product_id}", response_model=ProductSchema)
+def get_product(
+    product_id: int,
+    db: Session = Depends(get_db)
+):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Usar URL de afiliado se disponível
+    response_data = product.__dict__.copy()
+    if product.affiliate_url:
+        response_data["product_url"] = product.affiliate_url
+    
+    return response_data
