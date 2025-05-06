@@ -1,4 +1,5 @@
-from typing import Any, Dict, List
+# app/api/endpoints/sync.py
+from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 
@@ -8,64 +9,74 @@ from app.schemas.product import ProductCreate
 from app.services.affiliate_service import AffiliateService
 
 router = APIRouter()
-affiliate_service = AffiliateService()
 
-@router.post("/products/{platform}/", response_model=Dict[str, Any])
+def get_affiliate_service(db: Session = Depends(get_db)):
+    return AffiliateService(db)
+
+@router.post("/stores/{store_id}/products/", response_model=Dict[str, Any])
 async def sync_products(
-    platform: str,
+    store_id: int,
     query: str,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    category: str = None,
+    affiliate_service: AffiliateService = Depends(get_affiliate_service),
+    category: Optional[str] = None,
     limit: int = 50,
 ):
     """
-    Sincroniza produtos de uma plataforma para o banco de dados local.
+    Synchronize products from an affiliate store to the local database.
     """
-    # Verificar se a plataforma é suportada
+    # Verificar se a loja existe
     try:
-        affiliate_service.get_client(platform)
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Platform {platform} not supported")
+        affiliate_service.get_client(store_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     
     # Iniciar sincronização em segundo plano
     background_tasks.add_task(
         sync_products_task,
-        platform=platform,
+        store_id=store_id,
         query=query,
         category=category,
         limit=limit,
-        db=db
+        db=db,
+        affiliate_service=affiliate_service
     )
     
     return {
         "message": "Product synchronization started",
-        "platform": platform,
+        "store_id": store_id,
         "query": query,
         "category": category,
         "limit": limit
     }
 
 async def sync_products_task(
-    platform: str,
+    store_id: int,
     query: str,
-    category: str,
+    category: Optional[str],
     limit: int,
-    db: Session
+    db: Session,
+    affiliate_service: AffiliateService
 ):
     """
-    Tarefa em segundo plano para sincronizar produtos.
+    Background task to synchronize products.
     """
     try:
-        # Buscar produtos na plataforma
-        products = await affiliate_service.search_products(platform, query, category=category, limit=limit)
+        # Buscar produtos na loja afiliada
+        products = await affiliate_service.search_products(
+            store_id=store_id,
+            query=query,
+            category=category,
+            limit=limit
+        )
         
         # Sincronizar com o banco de dados
         for product_data in products:
             # Verificar se o produto já existe
             existing_product = db.query(Product).filter(
                 Product.external_id == product_data.external_id,
-                Product.platform == platform
+                Product.platform == product_data.platform
             ).first()
             
             if existing_product:

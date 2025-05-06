@@ -1,168 +1,62 @@
+# app/services/affiliate_service.py
 from typing import Dict, List, Optional, Any
-import logging
-
-from app.services.affiliate_clients import get_affiliate_client
-from app.services.affiliate_clients.base import AffiliateClientBase
+from sqlalchemy.orm import Session
+from app.models.affiliate_store import AffiliateStore
+from app.clients.mercadolivre_client import MercadoLivreClient
 from app.schemas.product import ProductCreate
-from app.services.cache import cache
-
-logger = logging.getLogger(__name__)
 
 class AffiliateService:
-    """
-    Serviço para gerenciar e interagir com diferentes plataformas de afiliados.
-    """
+    """Service for managing affiliate stores and products."""
     
-    def __init__(self):
-        self.clients: Dict[str, AffiliateClientBase] = {}
+    def __init__(self, db: Session):
+        """Initialize with database session."""
+        self.db = db
+        self.clients = {}
+        self._load_clients()
     
-    def get_client(self, platform: str) -> AffiliateClientBase:
-        """
-        Obtém um cliente para a plataforma especificada, criando-o se necessário.
+    def _load_clients(self):
+        """Load clients for active affiliate stores."""
+        stores = self.db.query(AffiliateStore).filter(AffiliateStore.active == True).all()
         
-        Args:
-            platform: Nome da plataforma
-            
-        Returns:
-            Cliente para a plataforma
-        """
-        if platform not in self.clients:
-            try:
-                self.clients[platform] = get_affiliate_client(platform)
-            except ValueError as e:
-                logger.error(f"Error creating affiliate client: {e}")
-                raise
-        
-        return self.clients[platform]
+        for store in stores:
+            if store.platform == "mercadolivre":
+                self.clients[store.id] = MercadoLivreClient(store.api_credentials)
+            # Adicionar mais plataformas conforme necessário
     
-    async def search_products_all_platforms(self, query: str, limit: int = 20) -> Dict[str, List[ProductCreate]]:
-        """
-        Busca produtos em todas as plataformas suportadas.
-        
-        Args:
-            query: Termo de busca
-            limit: Número máximo de resultados por plataforma
+    def get_client(self, store_id: int):
+        """Get client for a specific store."""
+        if store_id not in self.clients:
+            # Tentar carregar o cliente se não estiver carregado
+            store = self.db.query(AffiliateStore).filter(
+                AffiliateStore.id == store_id,
+                AffiliateStore.active == True
+            ).first()
             
-        Returns:
-            Dicionário com resultados por plataforma
-        """
-        # Verificar cache
-        cache_key = f"search:all:{query}:{limit}"
-        cached_results = await cache.get(cache_key)
-        if cached_results:
-            return cached_results
+            if not store:
+                raise ValueError(f"Store with ID {store_id} not found or not active")
+            
+            if store.platform == "mercadolivre":
+                self.clients[store.id] = MercadoLivreClient(store.api_credentials)
+            # Adicionar mais plataformas conforme necessário
         
-        results: Dict[str, List[ProductCreate]] = {}
-        
-        for platform in ["mercadolivre"]:  # Adicionar outras plataformas aqui
-            try:
-                client = self.get_client(platform)
-                products = await client.search_products(query, limit=limit)
-                
-                # Converter para dicionários para armazenar no cache
-                results[platform] = [p.model_dump() for p in products]
-            except Exception as e:
-                logger.error(f"Error searching products on {platform}: {e}")
-                results[platform] = []
-        
-        # Armazenar no cache por 30 minutos
-        await cache.set(cache_key, results, expire=1800)
-        
-        return results
+        return self.clients[store_id]
     
-    async def search_products(self, platform: str, query: str, category: Optional[str] = None, limit: int = 20) -> List[ProductCreate]:
-        """
-        Busca produtos em uma plataforma específica.
+    async def search_products(self, store_id: int, query: str, **kwargs) -> List[ProductCreate]:
+        """Search for products in a specific store."""
+        client = self.get_client(store_id)
+        products_data = await client.search_products(query, **kwargs)
         
-        Args:
-            platform: Nome da plataforma
-            query: Termo de busca
-            category: Categoria opcional para filtrar
-            limit: Número máximo de resultados
-            
-        Returns:
-            Lista de produtos encontrados
-        """
-        # Verificar cache
-        cache_key = f"search:{platform}:{query}:{category}:{limit}"
-        cached_results = await cache.get(cache_key)
-        if cached_results:
-            # Converter de volta para objetos ProductCreate
-            return [ProductCreate(**item) for item in cached_results]
-        
-        try:
-            client = self.get_client(platform)
-            products = await client.search_products(query, category=category, limit=limit)
-            
-            # Armazenar no cache por 30 minutos
-            await cache.set(cache_key, [p.model_dump() for p in products], expire=1800)
-            
-            return products
-        except Exception as e:
-            logger.error(f"Error searching products on {platform}: {e}")
-            return []
+        # Converter para schema ProductCreate
+        products = [ProductCreate(**product_data) for product_data in products_data]
+        return products
     
-    async def get_product_details(self, platform: str, product_id: str) -> Optional[ProductCreate]:
-        """
-        Obtém detalhes de um produto específico.
-        
-        Args:
-            platform: Nome da plataforma
-            product_id: ID do produto na plataforma
-            
-        Returns:
-            Detalhes do produto ou None se não encontrado
-        """
-        # Verificar cache
-        cache_key = f"product:{platform}:{product_id}"
-        cached_product = await cache.get(cache_key)
-        if cached_product:
-            return ProductCreate(**cached_product)
-        
-        try:
-            client = self.get_client(platform)
-            product = await client.get_product_details(product_id)
-            
-            if product:
-                # Armazenar no cache por 1 hora
-                await cache.set(cache_key, product.model_dump(), expire=3600)
-            
-            return product
-        except Exception as e:
-            logger.error(f"Error getting product details from {platform}: {e}")
-            return None
+    async def generate_affiliate_link(self, store_id: int, product_url: str) -> str:
+        """Generate an affiliate link for a product."""
+        client = self.get_client(store_id)
+        return await client.generate_affiliate_link(product_url)
     
-    async def get_product_categories(self, platform: str) -> List[Dict[str, Any]]:
-        """
-        Obtém as categorias de produtos disponíveis na plataforma.
-        
-        Args:
-            platform: Nome da plataforma
-            
-        Returns:
-            Lista de categorias
-        """
-        # Verificar cache
-        cache_key = f"categories:{platform}"
-        cached_categories = await cache.get(cache_key)
-        if cached_categories:
-            return cached_categories
-        
-        try:
-            client = self.get_client(platform)
-            categories = await client.get_product_categories()
-            
-            # Armazenar no cache por 24 horas
-            await cache.set(cache_key, categories, expire=86400)
-            
-            return categories
-        except Exception as e:
-            logger.error(f"Error getting categories from {platform}: {e}")
-            return []
-    
-    async def close(self):
-        """
-        Fecha todos os clientes.
-        """
-        for client in self.clients.values():
-            await client.close()
+    async def get_product_details(self, store_id: int, product_id: str) -> ProductCreate:
+        """Get detailed information about a specific product."""
+        client = self.get_client(store_id)
+        product_data = await client.get_product_details(product_id)
+        return ProductCreate(**product_data)
