@@ -1,6 +1,8 @@
 # migrations/env.py
-
 from logging.config import fileConfig
+import sys
+import os
+from pathlib import Path
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
@@ -8,43 +10,24 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from alembic import context
 
-# Adicione estas importações
-import sys
-import os
-from pathlib import Path
-
 # Adicione o diretório raiz do projeto ao sys.path
 sys.path.append(str(Path(__file__).parent.parent))
 
-# Crie uma Base declarativa para uso com Alembic
-Base = declarative_base()
+# Pegue o Base real do seu projeto (importante!)
+from app.db.session import Base
+
+# Importe os models para incluir no metadata
+from app.models import product, affiliate_store
+
+config = context.config
+fileConfig(config.config_file_name)
+config.set_main_option("sqlalchemy.url", "postgresql://admin:admin@localhost:11432/mcp_db")
+
+target_metadata = Base.metadata
 
 # Defina os modelos diretamente aqui para evitar dependências da aplicação
 from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Text
 from sqlalchemy.sql import func
-
-class Product(Base):
-    __tablename__ = "products"
-
-    id = Column(Integer, primary_key=True, index=True)
-    external_id = Column(String, index=True)
-    platform = Column(String, index=True)
-    title = Column(String, index=True)
-    description = Column(Text)
-    price = Column(Float)
-    sale_price = Column(Float, nullable=True)
-    image_url = Column(String)
-    product_url = Column(String)
-    affiliate_url = Column(String, nullable=True)  # Nova coluna
-    category = Column(String, nullable=True)
-    brand = Column(String, nullable=True)
-    available = Column(Boolean, default=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
-config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -52,10 +35,6 @@ fileConfig(config.config_file_name)
 
 # Sobrescreva a URL do banco de dados diretamente
 config.set_main_option("sqlalchemy.url", "postgresql://admin:admin@localhost:11432/mcp_db")
-
-# add your model's MetaData object here
-# for 'autogenerate' support
-target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

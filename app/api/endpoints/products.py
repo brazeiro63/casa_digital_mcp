@@ -9,7 +9,6 @@ from app.schemas.product import Product as ProductSchema, ProductCreate, Product
 from app.services.affiliate_service import AffiliateService
 
 router = APIRouter()
-affiliate_service = AffiliateService()
 
 # Manter os endpoints existentes...
 
@@ -17,10 +16,12 @@ affiliate_service = AffiliateService()
 async def search_products_all_platforms(
     q: str = Query(..., min_length=2),
     limit: int = Query(20, ge=1, le=50),
+    db: Session = Depends(get_db),
 ):
     """
     Busca produtos em todas as plataformas suportadas.
     """
+    affiliate_service = AffiliateService(db)
     results = await affiliate_service.search_products_all_platforms(q, limit=limit)
     return results
 
@@ -30,10 +31,12 @@ async def search_products(
     q: str = Query(..., min_length=2),
     category: Optional[str] = None,
     limit: int = Query(20, ge=1, le=50),
+    db: Session = Depends(get_db),
 ):
     """
     Busca produtos em uma plataforma específica.
     """
+    affiliate_service = AffiliateService(db)
     results = await affiliate_service.search_products(platform, q, category=category, limit=limit)
     return results
 
@@ -41,10 +44,12 @@ async def search_products(
 async def get_external_product(
     platform: str,
     product_id: str,
+    db: Session = Depends(get_db),
 ):
     """
     Obtém detalhes de um produto externo específico.
     """
+    affiliate_service = AffiliateService(db)
     product = await affiliate_service.get_product_details(platform, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -53,10 +58,12 @@ async def get_external_product(
 @router.get("/categories/{platform}/", response_model=List[Dict[str, Any]])
 async def get_product_categories(
     platform: str,
+    db: Session = Depends(get_db),
 ):
     """
     Obtém as categorias de produtos disponíveis na plataforma.
     """
+    affiliate_service = AffiliateService(db)
     categories = await affiliate_service.get_product_categories(platform)
     return categories
 
@@ -65,6 +72,7 @@ def get_product(
     product_id: int,
     db: Session = Depends(get_db)
 ):
+    affiliate_service = AffiliateService(db)
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
