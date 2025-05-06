@@ -1,0 +1,16 @@
+sequenceDiagram
+    participant Marketplaces as Marketplaces (ML, Amazon, etc.)
+    participant PMS as Aplicação de Gestão de Produtos
+    participant MCP as Servidor MCP
+    participant Agent as Agente de IA
+    participant User as Usuário Final
+
+    Marketplaces->>PMS: Dados de produtos
+    PMS->>PMS: Processa e armazena produtos
+    
+    Agent->>MCP: Consulta sobre produtos
+    MCP->>PMS: Solicita dados relevantes
+    PMS->>MCP: Retorna dados de produtos
+    MCP->>MCP: Estrutura contexto para IA
+    MCP->>Agent: Fornece contexto estruturado
+    Agent->>User: Responde com informações relevantes
