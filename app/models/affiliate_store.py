@@ -8,6 +8,7 @@ class AffiliateStore(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True, nullable=False)
     platform = Column(String, index=True, nullable=False)  # mercadolivre, amazon, etc.
+    url = Column(String(255), index=True, nullable=True)  # Nova coluna para a URL da loja
     api_credentials = Column(JSON, nullable=False)  # Armazena credenciais de forma segura
     active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

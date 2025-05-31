@@ -7,6 +7,7 @@ class AffiliateStoreBase(BaseModel):
     name: str
     platform: str
     active: bool = True
+    url: str = None
 
 class AffiliateStoreCreate(AffiliateStoreBase):
     api_credentials: Dict[str, str] = Field(..., description="API credentials for the platform")
