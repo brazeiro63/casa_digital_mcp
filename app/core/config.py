@@ -3,8 +3,8 @@ from pydantic import AnyHttpUrl, field_validator
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    API_V1_STR: str = "/api/v1"
-    PROJECT_NAME: str = "Casa Digital MCP"
+    API_V1_STR: str
+    PROJECT_NAME: str
     
     # CORS
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
@@ -18,14 +18,13 @@ class Settings(BaseSettings):
         raise ValueError(v)
 
     # Database
-    POSTGRES_SERVER: str = "localhost"
-    POSTGRES_USER: str = "admin"
-    POSTGRES_PASSWORD: str = "admin"
-    POSTGRES_DB: str = "mcp_db"
-    POSTGRES_PORT: str = "11432"
+    POSTGRES_SERVER: str
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_DB: str
+    POSTGRES_PORT: str
     DATABASE_URI: Optional[str] = None
-    # Adicione a configuração DATABASE_URL
-    DATABASE_URL: str = "postgresql://admin:admin@localhost:11432/mcp_db"
+    DATABASE_URL: str
     
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
@@ -34,17 +33,17 @@ class Settings(BaseSettings):
         return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
     
     # Redis
-    REDIS_HOST: str = "localhost"
-    REDIS_PORT: int = 6379
-    REDIS_DB: int = 0
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_DB: int
     REDIS_PASSWORD: Optional[str] = None
 
     # Security
-    SECRET_KEY: str = "your-secret-key-here"  # Alterar em produção!
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
+    SECRET_KEY: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
     
     class Config:
         case_sensitive = True
         env_file = ".env"
 
-settings = Settings()
+settings = Settings() 

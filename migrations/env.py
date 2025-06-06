@@ -21,7 +21,7 @@ from app.models import product, affiliate_store
 
 config = context.config
 fileConfig(config.config_file_name)
-config.set_main_option("sqlalchemy.url", "postgresql://admin:admin@localhost:11432/mcp_db")
+config.set_main_option("sqlalchemy.url", "postgresql://admin:admin@db:5432/mcp_db")
 
 target_metadata = Base.metadata
 
@@ -34,7 +34,7 @@ from sqlalchemy.sql import func
 fileConfig(config.config_file_name)
 
 # Sobrescreva a URL do banco de dados diretamente
-config.set_main_option("sqlalchemy.url", "postgresql://admin:admin@localhost:11432/mcp_db")
+config.set_main_option("sqlalchemy.url", "postgresql://admin:admin@db:5432/mcp_db")
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
