@@ -9,13 +9,14 @@ services:
       - .:/app
     environment:
       - POSTGRES_SERVER=db
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=admin
-      - POSTGRES_DB=mcp_db
       - REDIS_HOST=redis
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - mcpnetwork
@@ -30,12 +31,16 @@ services:
       - POSTGRES_DB=mcp_db
     ports:
       - "5435:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "localhost", "-U", "admin"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - mcpnetwork
 
-
   redis:
-    image: redis:6
+    image: redis:7.2
     ports:
       - "6380:6379"
     volumes:
