@@ -32,7 +32,7 @@ services:
     ports:
       - "5435:5432"
     healthcheck:
-      test: ["CMD", "pg_isready", "-h", "localhost", "-U", "admin"]
+      test: ["CMD", "pg_isready", "-h", "localhost", "mcp_db"]
       interval: 5s
       timeout: 5s
       retries: 5

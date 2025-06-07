@@ -10,3 +10,5 @@ wheels/
 .venv
 .environments
 .env 
+test_db.py
+test_db.py
